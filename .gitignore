@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Go build artifacts
+*.exe
+*.test
+*.out
+
+# Go workspace files (only relevant if you ever use go.work)
+go.work
+go.work.sum
+
+# Editor/IDE
+.vscode/
+.idea/
