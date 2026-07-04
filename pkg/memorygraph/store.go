@@ -6,13 +6,15 @@ import (
 )
 
 type Store struct {
-	mu      sync.RWMutex
-	commits map[string]*Commit
+	mu       sync.RWMutex
+	commits  map[string]*Commit
+	branches map[string]*Branch
 }
 
 func NewStore() *Store {
 	return &Store{
-		commits: make(map[string]*Commit),
+		commits:  make(map[string]*Commit),
+		branches: make(map[string]*Branch),
 	}
 }
 
