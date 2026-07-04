@@ -52,3 +52,14 @@ func (s *Store) GetBranch(name string) (*Branch, error) {
 	}
 	return branch, nil
 }
+func (s *Store) ListBranches() []*Branch {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	branches := make([]*Branch, 0, len(s.branches))
+	for _, b := range s.branches {
+		branches = append(branches, b)
+	}
+
+	return branches
+
+}

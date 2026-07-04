@@ -113,3 +113,33 @@ func TestStore_ConcurrentBranchUpdates(t *testing.T) {
 		t.Errorf("final branch head does not point to a valid commit: %v", err)
 	}
 }
+func TestListBranches(t *testing.T) {
+	store := NewStore()
+
+	root, err := NewCommit(nil, "system", []byte("root"))
+	if err != nil {
+		t.Fatalf("failed to create root commit: %v", err)
+	}
+
+	if err := store.Put(root); err != nil {
+		t.Fatalf("failed to store root commit: %v", err)
+	}
+
+	if err := store.CreateBranch("main", root.Hash); err != nil {
+		t.Fatalf("failed to create main branch: %v", err)
+	}
+
+	if err := store.CreateBranch("dev", root.Hash); err != nil {
+		t.Fatalf("failed to create dev branch: %v", err)
+	}
+
+	if err := store.CreateBranch("feature", root.Hash); err != nil {
+		t.Fatalf("failed to create feature branch: %v", err)
+	}
+
+	branches := store.ListBranches()
+
+	if len(branches) != 3 {
+		t.Fatalf("expected 3 branches, got %d", len(branches))
+	}
+}
