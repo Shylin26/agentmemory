@@ -1,6 +1,10 @@
 package memorygraph
 
-import "testing"
+import (
+	"fmt"
+	"sync"
+	"testing"
+)
 
 func TestBranchLifecycle(t *testing.T) {
 	store := NewStore()
@@ -57,5 +61,55 @@ func TestCreateBranchInvalidCommit(t *testing.T) {
 	err := store.CreateBranch("main", "does-not-exists")
 	if err == nil {
 		t.Fatal("expected an error when creating a branch with a nonexistent commit ")
+	}
+}
+
+func TestStore_ConcurrentBranchUpdates(t *testing.T) {
+	store := NewStore()
+	root, err := NewCommit(nil, "system", []byte("root"))
+	if err != nil {
+		t.Fatalf("failed to create root commit %v", err)
+	}
+	if err := store.Put(root); err != nil {
+		t.Fatalf("failed to store root commit %v", err)
+	}
+	if err := store.CreateBranch("shared", root.Hash); err != nil {
+		t.Fatalf("failed to create branch: %v", err)
+	}
+	const numGoroutines = 50
+	var wg sync.WaitGroup
+	errCh := make(chan error, numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			commit, err := NewCommit([]string{root.Hash}, "system", []byte(fmt.Sprintf("update-%d", i)))
+			if err != nil {
+				errCh <- fmt.Errorf("goroutine %d: failed to create commit: %w", i, err)
+				return
+			}
+			if err := store.Put(commit); err != nil {
+				errCh <- fmt.Errorf("goroutine %d: failed to store commit: %w", i, err)
+				return
+			}
+			if err := store.UpdateBranch("shared", commit.Hash); err != nil {
+				errCh <- fmt.Errorf("goroutine %d: failed to update branch: %w", i, err)
+				return
+			}
+		}(i)
+	}
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Error(err)
+	}
+
+	finalBranch, err := store.GetBranch("shared")
+	if err != nil {
+		t.Fatalf("failed to get final branch state: %v", err)
+	}
+	if _, err := store.Get(finalBranch.Head); err != nil {
+		t.Errorf("final branch head does not point to a valid commit: %v", err)
 	}
 }
